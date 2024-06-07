@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dumb Stinky Gyatt</title>
+    <title>Connect Four, Tic Tac Toe, Pong, and Clicker Game</title>
     <style>
-        /* Add your CSS styles here */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -13,6 +12,7 @@
             align-items: center;
             height: 100vh;
             background-color: #f0f0f0;
+            margin: 0;
         }
         .game-container {
             text-align: center;
@@ -41,18 +41,26 @@
         canvas {
             background-color: #000;
         }
+        #clickerGame {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
         <div id="gameOptions">
-            <button onclick="startGame('ticTacToe')">tic tac sigma</button>
-            <button onclick="startGame('connectFour')">Connect skibidi</button>
+            <button onclick="startGame('ticTacToe')">Play Tic Tac Toe</button>
+            <button onclick="startGame('connectFour')">Play Connect Four</button>
             <button onclick="startGame('pong')">Play Pong</button>
+            <button onclick="startGame('clicker')">Play Clicker Game</button>
         </div>
         <div id="ticTacToeBoard" class="board hidden"></div>
         <div id="connectFourBoard" class="board hidden"></div>
         <canvas id="pongCanvas" class="hidden" width="600" height="400"></canvas>
+        <div id="clickerGame" class="hidden">
+            <button id="clickerButton" onclick="clickButton()">Click me!</button>
+            <div id="clickerScore">Score: 0</div>
+        </div>
         <button id="restartButton" class="hidden" onclick="restartGame()">Restart Game</button>
         <div id="gameMessage"></div>
     </div>
@@ -61,6 +69,9 @@
         const ticTacToeBoard = document.getElementById('ticTacToeBoard');
         const connectFourBoard = document.getElementById('connectFourBoard');
         const pongCanvas = document.getElementById('pongCanvas');
+        const clickerGame = document.getElementById('clickerGame');
+        const clickerButton = document.getElementById('clickerButton');
+        const clickerScore = document.getElementById('clickerScore');
         const ctx = pongCanvas.getContext('2d');
         const restartButton = document.getElementById('restartButton');
         const gameMessage = document.getElementById('gameMessage');
@@ -70,6 +81,7 @@
         let connectFourState = Array(42).fill(null);
         let connectFourCurrentRow = Array(7).fill(5);
         let pongGameInterval;
+        let score = 0;
 
         const startGame = (game) => {
             currentGame = game;
@@ -81,6 +93,8 @@
                 initConnectFour();
             } else if (game === 'pong') {
                 initPong();
+            } else if (game === 'clicker') {
+                initClicker();
             }
         }
 
@@ -89,6 +103,7 @@
             ticTacToeBoard.classList.add('hidden');
             connectFourBoard.classList.add('hidden');
             pongCanvas.classList.add('hidden');
+            clickerGame.classList.add('hidden');
             restartButton.classList.add('hidden');
             gameMessage.textContent = '';
             document.getElementById('gameOptions').classList.remove('hidden');
@@ -98,6 +113,8 @@
             connectFourState.fill(null);
             connectFourCurrentRow.fill(5);
             currentPlayer = 'X';
+            score = 0;
+            clickerScore.textContent = 'Score: 0';
         }
 
         const initTicTacToe = () => {
@@ -159,13 +176,9 @@
 
         const checkWinner = (board, width) => {
             const lines = [
-                // Horizontal
                 ...Array(width * (width - 1)).fill().map((_, i) => i % width < width - 2 ? [i, i + 1, i + 2, i + 3] : []),
-                // Vertical
                 ...Array(width * (width - 3)).fill().map((_, i) => [i, i + width, i + 2 * width, i + 3 * width]),
-                // Diagonal (bottom-left to top-right)
                 ...Array(width * (width - 3)).fill().map((_, i) => i % width < width - 3 ? [i, i + width + 1, i + 2 * (width + 1), i + 3 * (width + 1)] : []),
-                // Diagonal (top-left to bottom-right)
                 ...Array(width * (width - 3)).fill().map((_, i) => i % width > 2 ? [i, i + width - 1, i + 2 * (width - 1), i + 3 * (width - 1)] : [])
             ].filter(line => line.length === 4);
 
@@ -188,17 +201,17 @@
             document.addEventListener("keyup", keyUpHandler, false);
 
             function keyDownHandler(e) {
-                if (e.key == "Right" || e.key == "ArrowRight") {
+                if (e.key === "Right" || e.key === "ArrowRight") {
                     rightPressed = true;
-                } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                } else if (e.key === "Left" || e.key === "ArrowLeft") {
                     leftPressed = true;
                 }
             }
 
             function keyUpHandler(e) {
-                if (e.key == "Right" || e.key == "ArrowRight") {
+                if (e.key === "Right" || e.key === "ArrowRight") {
                     rightPressed = false;
-                } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                } else if (e.key === "Left" || e.key === "ArrowLeft") {
                     leftPressed = false;
                 }
             }
@@ -250,6 +263,16 @@
             }
 
             pongGameInterval = setInterval(draw, 10);
+        }
+
+        const initClicker = () => {
+            clickerGame.classList.remove('hidden');
+            restartButton.classList.remove('hidden');
+        }
+
+        const clickButton = () => {
+            score++;
+            clickerScore.textContent = `Score: ${score}`;
         }
     </script>
 </body>
