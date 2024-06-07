@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Four, Tic Tac Toe, and Pong</title>
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .board {
+            display: grid;
+            gap: 5px;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            border: 1px solid #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        #gameOptions {
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        canvas {
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="gameOptions">
+            <button onclick="startGame('ticTacToe')">Play Tic Tac Toe</button>
+            <button onclick="startGame('connectFour')">Play Connect Four</button>
+            <button onclick="startGame('pong')">Play Pong</button>
+        </div>
+        <div id="ticTacToeBoard" class="board hidden"></div>
+        <div id="connectFourBoard" class="board hidden"></div>
+        <canvas id="pongCanvas" class="hidden" width="600" height="400"></canvas>
+        <button id="restartButton" class="hidden" onclick="restartGame()">Restart Game</button>
+        <div id="gameMessage"></div>
+    </div>
+
+    <script>
+        const ticTacToeBoard = document.getElementById('ticTacToeBoard');
+        const connectFourBoard = document.getElementById('connectFourBoard');
+        const pongCanvas = document.getElementById('pongCanvas');
+        const ctx = pongCanvas.getContext('2d');
+        const restartButton = document.getElementById('restartButton');
+        const gameMessage = document.getElementById('gameMessage');
+        let currentGame = '';
+        let currentPlayer = 'X';
+        let ticTacToeState = Array(9).fill(null);
+        let connectFourState = Array(42).fill(null);
+        let connectFourCurrentRow = Array(7).fill(5);
+        let pongGameInterval;
+
+        const startGame = (game) => {
+            currentGame = game;
+            document.getElementById('gameOptions').classList.add('hidden');
+            gameMessage.textContent = `Player ${currentPlayer}'s turn`;
+            if (game === 'ticTacToe') {
+                initTicTacToe();
+            } else if (game === 'connectFour') {
+                initConnectFour();
+            } else if (game === 'pong') {
+                initPong();
+            }
+        }
+
+        const restartGame = () => {
+            clearInterval(pongGameInterval);
+            ticTacToeBoard.classList.add('hidden');
+            connectFourBoard.classList.add('hidden');
+            pongCanvas.classList.add('hidden');
+            restartButton.classList.add('hidden');
+            gameMessage.textContent = '';
+            document.getElementById('gameOptions').classList.remove('hidden');
+            ticTacToeBoard.innerHTML = '';
+            connectFourBoard.innerHTML = '';
+            ticTacToeState.fill(null);
+            connectFourState.fill(null);
+            connectFourCurrentRow.fill(5);
+            currentPlayer = 'X';
+        }
+
+        const initTicTacToe = () => {
+            ticTacToeBoard.classList.remove('hidden');
+            ticTacToeBoard.style.gridTemplateColumns = 'repeat(3, 50px)';
+            ticTacToeBoard.style.gridTemplateRows = 'repeat(3, 50px)';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.addEventListener('click', () => playTicTacToe(i));
+                ticTacToeBoard.appendChild(cell);
+            }
+            restartButton.classList.remove('hidden');
+        }
+
+        const playTicTacToe = (index) => {
+            if (ticTacToeState[index] || checkWinner(ticTacToeState, 3)) return;
+            ticTacToeState[index] = currentPlayer;
+            ticTacToeBoard.children[index].textContent = currentPlayer;
+            if (checkWinner(ticTacToeState, 3)) {
+                gameMessage.textContent = `Player ${currentPlayer} wins!`;
+            } else if (ticTacToeState.every(cell => cell)) {
+                gameMessage.textContent = "It's a draw!";
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                gameMessage.textContent = `Player ${currentPlayer}'s turn`;
+            }
+        }
+
+        const initConnectFour = () => {
+            connectFourBoard.classList.remove('hidden');
+            connectFourBoard.style.gridTemplateColumns = 'repeat(7, 50px)';
+            connectFourBoard.style.gridTemplateRows = 'repeat(6, 50px)';
+            for (let i = 0; i < 42; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.addEventListener('click', () => playConnectFour(i % 7));
+                connectFourBoard.appendChild(cell);
+            }
+            restartButton.classList.remove('hidden');
+        }
+
+        const playConnectFour = (col) => {
+            const row = connectFourCurrentRow[col];
+            if (row < 0 || checkWinner(connectFourState, 7)) return;
+            const index = row * 7 + col;
+            connectFourState[index] = currentPlayer;
+            connectFourBoard.children[index].textContent = currentPlayer;
+            connectFourCurrentRow[col]--;
+            if (checkWinner(connectFourState, 7)) {
+                gameMessage.textContent = `Player ${currentPlayer} wins!`;
+            } else if (connectFourState.every(cell => cell)) {
+                gameMessage.textContent = "It's a draw!";
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                gameMessage.textContent = `Player ${currentPlayer}'s turn`;
+            }
+        }
+
+        const checkWinner = (board, width) => {
+            const lines = [
+                // Horizontal
+                ...Array(width * (width - 1)).fill().map((_, i) => i % width < width - 2 ? [i, i + 1, i + 2, i + 3] : []),
+                // Vertical
+                ...Array(width * (width - 3)).fill().map((_, i) => [i, i + width, i + 2 * width, i + 3 * width]),
+                // Diagonal (bottom-left to top-right)
+                ...Array(width * (width - 3)).fill().map((_, i) => i % width < width - 3 ? [i, i + width + 1, i + 2 * (width + 1), i + 3 * (width + 1)] : []),
+                // Diagonal (top-left to bottom-right)
+                ...Array(width * (width - 3)).fill().map((_, i) => i % width > 2 ? [i, i + width - 1, i + 2 * (width - 1), i + 3 * (width - 1)] : [])
+            ].filter(line => line.length === 4);
+
+            return lines.some(line => line.every(index => board[index] && board[index] === board[line[0]]));
+        }
+
+        const initPong = () => {
+            pongCanvas.classList.remove('hidden');
+            restartButton.classList.remove('hidden');
+
+            const paddleHeight = 10, paddleWidth = 75;
+            let rightPressed = false, leftPressed = false;
+            let ballRadius = 10;
+            let x = pongCanvas.width / 2;
+            let y = pongCanvas.height - 30;
+            let dx = 2, dy = -2;
+            let paddleX = (pongCanvas.width - paddleWidth) / 2;
+
+            document.addEventListener("keydown", keyDownHandler, false);
+            document.addEventListener("keyup", keyUpHandler, false);
+
+            function keyDownHandler(e) {
+                if (e.key == "Right" || e.key == "ArrowRight") {
+                    rightPressed = true;
+                } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                    leftPressed = true;
+                }
+            }
+
+            function keyUpHandler(e) {
+                if (e.key == "Right" || e.key == "ArrowRight") {
+                    rightPressed = false;
+                } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                    leftPressed = false;
+                }
+            }
+
+            function drawBall() {
+                ctx.beginPath();
+                ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+                ctx.fillStyle = "#0095DD";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            function drawPaddle() {
+                ctx.beginPath();
+                ctx.rect(paddleX, pongCanvas.height - paddleHeight, paddleWidth, paddleHeight);
+                ctx.fillStyle = "#0095DD";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+                drawBall();
+                drawPaddle();
+
+                if (x + dx > pongCanvas.width - ballRadius || x - ballRadius + dx < 0) {
+                    dx = -dx;
+                }
+                if (y + dy < ballRadius) {
+                    dy = -dy;
+                } else if (y + dy > pongCanvas.height - ballRadius) {
+                    if (x > paddleX && x < paddleX + paddleWidth) {
+                        dy = -dy;
+                    } else {
+                        clearInterval(pongGameInterval);
+                        gameMessage.textContent = "Game Over";
+                        return;
+                    }
+                }
+
+                x += dx;
+                y += dy;
+
+                if (rightPressed && paddleX < pongCanvas.width - paddleWidth) {
+                    paddleX += 7;
+                } else if (leftPressed && paddleX > 0) {
+                    paddleX -= 7;
+                }
+            }
+
+            pongGameInterval = setInterval(draw, 10);
+        }
+    </script>
+</body>
+</html>
