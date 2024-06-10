@@ -199,12 +199,16 @@
             restartButton.classList.remove('hidden');
 
             const paddleHeight = 10, paddleWidth = 75;
-            let rightPressed = false, leftPressed = false;
+            const leftPaddleHeight = 75, leftPaddleWidth = 10;
+            const rightPaddleHeight = 75, rightPaddleWidth = 10;
+            let rightPressed = false, leftPressed = false, upPressed = false, downPressed = false;
             let ballRadius = 10;
             let x = pongCanvas.width / 2;
-            let y = pongCanvas.height - 30;
-            let dx = 2, dy = -2;
+            let y = pongCanvas.height / 2;
+            let dx = 2, dy = 2;
             let paddleX = (pongCanvas.width - paddleWidth) / 2;
+            let leftPaddleY = (pongCanvas.height - leftPaddleHeight) / 2;
+            let rightPaddleY = (pongCanvas.height - rightPaddleHeight) / 2;
 
             document.addEventListener("keydown", keyDownHandler, false);
             document.addEventListener("keyup", keyUpHandler, false);
@@ -214,6 +218,10 @@
                     rightPressed = true;
                 } else if (e.key === "Left" || e.key === "ArrowLeft") {
                     leftPressed = true;
+                } else if (e.key === "Up" || e.key === "ArrowUp") {
+                    upPressed = true;
+                } else if (e.key === "Down" || e.key === "ArrowDown") {
+                    downPressed = true;
                 }
             }
 
@@ -222,6 +230,10 @@
                     rightPressed = false;
                 } else if (e.key === "Left" || e.key === "ArrowLeft") {
                     leftPressed = false;
+                } else if (e.key === "Up" || e.key === "ArrowUp") {
+                    upPressed = false;
+                } else if (e.key === "Down" || e.key === "ArrowDown") {
+                    downPressed = false;
                 }
             }
 
@@ -233,9 +245,24 @@
                 ctx.closePath();
             }
 
-            function drawPaddle() {
+            function drawPaddles() {
+                // Draw right paddle
                 ctx.beginPath();
                 ctx.rect(paddleX, pongCanvas.height - paddleHeight, paddleWidth, paddleHeight);
+                ctx.fillStyle = "#0095DD";
+                ctx.fill();
+                ctx.closePath();
+
+                // Draw left paddle
+                ctx.beginPath();
+                ctx.rect(0, leftPaddleY, leftPaddleWidth, leftPaddleHeight);
+                ctx.fillStyle = "#0095DD";
+                ctx.fill();
+                ctx.closePath();
+
+                // Draw right paddle (player 2)
+                ctx.beginPath();
+                ctx.rect(pongCanvas.width - rightPaddleWidth, rightPaddleY, rightPaddleWidth, rightPaddleHeight);
                 ctx.fillStyle = "#0095DD";
                 ctx.fill();
                 ctx.closePath();
@@ -244,30 +271,39 @@
             function draw() {
                 ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
                 drawBall();
-                drawPaddle();
+                drawPaddles();
 
-                if (x + dx > pongCanvas.width - ballRadius || x - ballRadius + dx < 0) {
+                // Ball collision with walls
+                if (x + dx > pongCanvas.width - ballRadius || x - ballRadius + dx < ballRadius) {
                     dx = -dx;
                 }
-                if (y + dy < ballRadius) {
+                if (y + dy > pongCanvas.height - ballRadius || y - ballRadius + dy < ballRadius) {
                     dy = -dy;
-                } else if (y + dy > pongCanvas.height - ballRadius) {
-                    if (x > paddleX && x < paddleX + paddleWidth) {
-                        dy = -dy;
-                    } else {
-                        clearInterval(pongGameInterval);
-                        gameMessage.textContent = "Game Over";
-                        return;
-                    }
+                }
+
+                // Ball collision with paddles
+                if (x - ballRadius < leftPaddleWidth && y > leftPaddleY && y < leftPaddleY + leftPaddleHeight) {
+                    dx = -dx;
+                }
+                if (x + ballRadius > pongCanvas.width - rightPaddleWidth && y > rightPaddleY && y < rightPaddleY + rightPaddleHeight) {
+                    dx = -dx;
                 }
 
                 x += dx;
                 y += dy;
 
-                if (rightPressed && paddleX < pongCanvas.width - paddleWidth) {
-                    paddleX += 7;
-                } else if (leftPressed && paddleX > 0) {
-                    paddleX -= 7;
+                // Left paddle movement
+                if (upPressed && leftPaddleY > 0) {
+                    leftPaddleY -= 7;
+                } else if (downPressed && leftPaddleY < pongCanvas.height - leftPaddleHeight) {
+                    leftPaddleY += 7;
+                }
+
+                // Right paddle movement (player 2)
+                if (rightPressed && rightPaddleY > 0) {
+                    rightPaddleY -= 7;
+                } else if (leftPressed && rightPaddleY < pongCanvas.height - rightPaddleHeight) {
+                    rightPaddleY += 7;
                 }
             }
 
