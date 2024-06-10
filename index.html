@@ -264,9 +264,6 @@
                 drawPaddles();
 
                 // Ball collision with walls
-                if (x + dx > pongCanvas.width - ballRadius || x - ballRadius + dx < ballRadius) {
-                    dx = -dx;
-                }
                 if (y + dy > pongCanvas.height - ballRadius || y - ballRadius + dy < ballRadius) {
                     dy = -dy;
                 }
@@ -281,6 +278,17 @@
 
                 x += dx;
                 y += dy;
+
+                // Check if ball hits the left or right wall (other player wins)
+                if (x - ballRadius < 0) {
+                    clearInterval(pongGameInterval);
+                    gameMessage.textContent = "Player 2 wins!";
+                    restartButton.classList.remove('hidden');
+                } else if (x + ballRadius > pongCanvas.width) {
+                    clearInterval(pongGameInterval);
+                    gameMessage.textContent = "Player 1 wins!";
+                    restartButton.classList.remove('hidden');
+                }
 
                 // Left paddle movement (player 1)
                 if (wPressed && leftPaddleY > 0) {
