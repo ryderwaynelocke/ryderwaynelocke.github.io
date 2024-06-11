@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Four, Tic Tac Toe, Pong, and Clicker Game</title>
+    <title>All-in-One Game: Connect Four, Tic Tac Toe, Pong, and Skibidi Raise</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -41,11 +41,11 @@
         canvas {
             background-color: #000;
         }
-        #clickerGame {
+        #skibidiGame {
             font-size: 24px;
         }
-        #shop {
-            margin-top: 20px;
+        .status {
+            margin: 10px;
         }
     </style>
 </head>
@@ -55,18 +55,17 @@
             <button onclick="startGame('ticTacToe')">Play Tic Tac Toe</button>
             <button onclick="startGame('connectFour')">Play Connect Four</button>
             <button onclick="startGame('pong')">Play Pong</button>
-            <button onclick="startGame('clicker')">Play Clicker Game</button>
+            <button onclick="startGame('skibidi')">Skibidi Raise</button>
         </div>
         <div id="ticTacToeBoard" class="board hidden"></div>
         <div id="connectFourBoard" class="board hidden"></div>
         <canvas id="pongCanvas" class="hidden" width="600" height="400"></canvas>
-        <div id="clickerGame" class="hidden">
-            <button id="clickerButton" onclick="clickButton()">Click me!</button>
-            <div id="clickerScore">Score: 0</div>
-            <div id="shop">
-                <h2>Shop</h2>
-                <button onclick="buyCursor()">Buy Cursor (+1 point/click) - 50 points</button>
-            </div>
+        <div id="skibidiGame" class="hidden">
+            <div class="status">Health: <span id="health">100</span></div>
+            <div class="status">Happiness: <span id="happiness">100</span></div>
+            <button onclick="feedSkibidi()">Feed Skibidi</button>
+            <button onclick="playWithSkibidi()">Play with Skibidi</button>
+            <div id="gameOverMessage" class="hidden">Game Over!</div>
         </div>
         <button id="restartButton" class="hidden" onclick="restartGame()">Restart Game</button>
         <div id="gameMessage"></div>
@@ -76,9 +75,10 @@
         const ticTacToeBoard = document.getElementById('ticTacToeBoard');
         const connectFourBoard = document.getElementById('connectFourBoard');
         const pongCanvas = document.getElementById('pongCanvas');
-        const clickerGame = document.getElementById('clickerGame');
-        const clickerButton = document.getElementById('clickerButton');
-        const clickerScore = document.getElementById('clickerScore');
+        const skibidiGame = document.getElementById('skibidiGame');
+        const healthElement = document.getElementById('health');
+        const happinessElement = document.getElementById('happiness');
+        const gameOverMessage = document.getElementById('gameOverMessage');
         const ctx = pongCanvas.getContext('2d');
         const restartButton = document.getElementById('restartButton');
         const gameMessage = document.getElementById('gameMessage');
@@ -88,8 +88,9 @@
         let connectFourState = Array(42).fill(null);
         let connectFourCurrentRow = Array(7).fill(5);
         let pongGameInterval;
-        let score = 0;
-        let pointsPerClick = 1;
+        let skibidiInterval;
+        let health = 100;
+        let happiness = 100;
 
         const startGame = (game) => {
             currentGame = game;
@@ -101,17 +102,18 @@
                 initConnectFour();
             } else if (game === 'pong') {
                 initPong();
-            } else if (game === 'clicker') {
-                initClicker();
+            } else if (game === 'skibidi') {
+                initSkibidi();
             }
         }
 
         const restartGame = () => {
             clearInterval(pongGameInterval);
+            clearInterval(skibidiInterval);
             ticTacToeBoard.classList.add('hidden');
             connectFourBoard.classList.add('hidden');
             pongCanvas.classList.add('hidden');
-            clickerGame.classList.add('hidden');
+            skibidiGame.classList.add('hidden');
             restartButton.classList.add('hidden');
             gameMessage.textContent = '';
             document.getElementById('gameOptions').classList.remove('hidden');
@@ -121,9 +123,11 @@
             connectFourState.fill(null);
             connectFourCurrentRow.fill(5);
             currentPlayer = 'X';
-            score = 0;
-            pointsPerClick = 1;
-            clickerScore.textContent = 'Score: 0';
+            health = 100;
+            happiness = 100;
+            healthElement.textContent = health;
+            happinessElement.textContent = happiness;
+            gameOverMessage.classList.add('hidden');
         }
 
         const initTicTacToe = () => {
@@ -189,17 +193,16 @@
                 ...Array(width * (width - 3)).fill().map((_, i) => [i, i + width, i + 2 * width, i + 3 * width]),
                 ...Array(width * (width - 3)).fill().map((_, i) => i % width < width - 3 ? [i, i + width + 1, i + 2 * (width + 1), i + 3 * (width + 1)] : []),
                 ...Array(width * (width - 3)).fill().map((_, i) => i % width > 2 ? [i, i + width - 1, i + 2 * (width - 1), i + 3 * (width - 1)] : [])
-            ].filter(line => line.length === 4);
-
-            return lines.some(line => line.every(index => board[index] && board[index] === board[line[0]]));
+            ];
+            return lines.some(line => line.length && line.every(index => board[index] === currentPlayer));
         }
 
         const initPong = () => {
             pongCanvas.classList.remove('hidden');
             restartButton.classList.remove('hidden');
 
-            const paddleHeight = 75, paddleWidth = 10;
-            let wPressed = false, sPressed = false, upPressed = false, downPressed = false;
+            let paddleHeight = 75, paddleWidth = 10;
+            let upPressed = false, downPressed = false, wPressed = false, sPressed = false;
             let ballRadius = 10;
             let x = pongCanvas.width / 2;
             let y = pongCanvas.height / 2;
@@ -243,14 +246,12 @@
             }
 
             function drawPaddles() {
-                // Draw left paddle (player 1)
                 ctx.beginPath();
                 ctx.rect(0, leftPaddleY, paddleWidth, paddleHeight);
                 ctx.fillStyle = "#0095DD";
                 ctx.fill();
                 ctx.closePath();
 
-                // Draw right paddle (player 2)
                 ctx.beginPath();
                 ctx.rect(pongCanvas.width - paddleWidth, rightPaddleY, paddleWidth, paddleHeight);
                 ctx.fillStyle = "#0095DD";
@@ -263,12 +264,10 @@
                 drawBall();
                 drawPaddles();
 
-                // Ball collision with walls
                 if (y + dy > pongCanvas.height - ballRadius || y - ballRadius + dy < ballRadius) {
                     dy = -dy;
                 }
 
-                // Ball collision with paddles
                 if (x - ballRadius < paddleWidth && y > leftPaddleY && y < leftPaddleY + paddleHeight) {
                     dx = -dx;
                 }
@@ -279,7 +278,6 @@
                 x += dx;
                 y += dy;
 
-                // Check if ball hits the left or right wall (other player wins)
                 if (x - ballRadius < 0) {
                     clearInterval(pongGameInterval);
                     gameMessage.textContent = "Player 2 wins!";
@@ -290,14 +288,12 @@
                     restartButton.classList.remove('hidden');
                 }
 
-                // Left paddle movement (player 1)
                 if (wPressed && leftPaddleY > 0) {
                     leftPaddleY -= 7;
                 } else if (sPressed && leftPaddleY < pongCanvas.height - paddleHeight) {
                     leftPaddleY += 7;
                 }
 
-                // Right paddle movement (player 2)
                 if (upPressed && rightPaddleY > 0) {
                     rightPaddleY -= 7;
                 } else if (downPressed && rightPaddleY < pongCanvas.height - paddleHeight) {
@@ -308,24 +304,38 @@
             pongGameInterval = setInterval(draw, 10);
         }
 
-        const initClicker = () => {
-            clickerGame.classList.remove('hidden');
+        const initSkibidi = () => {
+            skibidiGame.classList.remove('hidden');
             restartButton.classList.remove('hidden');
+            skibidiInterval = setInterval(() => {
+                health -= 1;
+                happiness -= 1;
+                updateStatus();
+                if (health <= 0 || happiness <= 0) {
+                    clearInterval(skibidiInterval);
+                    gameOver();
+                }
+            }, 1000);
         }
 
-        const clickButton = () => {
-            score += pointsPerClick;
-            clickerScore.textContent = `Score: ${score}`;
+        const feedSkibidi = () => {
+            health = Math.min(health + 20, 100);
+            updateStatus();
         }
 
-        const buyCursor = () => {
-            if (score >= 50) {
-                score -= 50;
-                pointsPerClick++;
-                clickerScore.textContent = `Score: ${score}`;
-            } else {
-                alert('Not enough points to buy the cursor!');
-            }
+        const playWithSkibidi = () => {
+            happiness = Math.min(happiness + 20, 100);
+            updateStatus();
+        }
+
+        const updateStatus = () => {
+            healthElement.textContent = health;
+            happinessElement.textContent = happiness;
+        }
+
+        const gameOver = () => {
+            gameOverMessage.classList.remove('hidden');
+            gameMessage.textContent = "Game Over!";
         }
     </script>
 </body>
